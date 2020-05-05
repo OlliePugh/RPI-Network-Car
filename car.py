@@ -20,19 +20,30 @@ class Car:
         self.socket = socket.socket(socket.AF_INET,
                                     socket.SOCK_DGRAM)  # declare the socket as a UDP internet connection socket
 
-        self.socket.connect(CONTROLLER_ADDRESS)
+        self.socket.connect(CONTROLLER_ADDRESS)  # connect to the car
 
         Thread(target=self.incoming_packet_handler, daemon=True).start()  # assign thread to listen to incoming traffic
 
     def incoming_packet_handler(self):
         while True:
             print("listening")
-            data, address = self.socket.recvfrom(1024)  # 1024 bytes buffer size
+            try:
+                data, address = self.socket.recvfrom(1024)  # 1024 bytes buffer size
+                packet_contents = pickle.loads(data)
+                if packet_contents[0] not in packet_dict:  # check that the packet id is in the list of packets with known ID's
+                    print("Packet unknown ID received. Packet ID = ", str(packet_contents[0]))
+                    continue  # go back to the start of the loop
 
-            packet_contents = pickle.loads(data)
-            print(packet_contents)
-            packet = packet_dict[packet_contents[0]](packet_contents)  # create the packet from the packet ID
-            self.reaction_dictionary[packet.__class__](packet)  # call the function that corresponds to the packet
+                packet = packet_dict[packet_contents[0]](packet_contents)  # create the packet from the packet ID
+
+                if packet.__class__ not in self.reaction_dictionary:
+                    print("Packet of unknown type received. Type =  " + packet.__class__.__name__)
+                    continue
+
+                self.reaction_dictionary[packet.__class__](packet)  # call the function that corresponds to the packet
+            except ConnectionResetError:
+                print("connection error")
+
 
     def send_example_packet(self):
         print("Sending Example Packet")

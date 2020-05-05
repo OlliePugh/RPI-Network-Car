@@ -54,21 +54,19 @@ def load_joysticks():
         print(i)
 
 
-def get_new_button_press():  # only support axis at the minute
-    axis = None
-    while axis is None:
-        for event in pygame.event.get():
-            if event.type == pygame.JOYAXISMOTION and abs(event.value) > 0.3:
-                return AxisInput(event.joy, event.axis)  # return the new axis
+def get_new_button_press():
+    for event in pygame.event.get():
+        if event.type == pygame.JOYAXISMOTION and abs(event.value) > 0.7:
+            return AxisInput(event.joy, event.axis)  # return the new axis
+    return None
+
+
+def joystick_pump():
+    pygame.event.pump()
 
 
 pygame.init() # start the pygame system
 load_joysticks()
 
 if __name__ == "__main__":
-
-    example_axis = get_new_button_press()
-
-    while True:
-        print(example_axis.get_normalised_input())
-        pygame.event.pump()
+    pass

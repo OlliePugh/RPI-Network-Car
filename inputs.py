@@ -31,10 +31,11 @@ class ButtonInput(Input):  # MAKE SURE pygame.event.pump() IS RAN BEFORE GETTING
 
 
 class AxisInput(Input):
-    def __init__(self, joystick_num, axis_num):
+    def __init__(self, joystick_num, axis_num, dead_zone=0):
         super(AxisInput, self).__init__()
         self.joystick = pygame.joystick.Joystick(joystick_num)
         self.axis_num = axis_num
+        self.dead_zone = dead_zone
 
     def get_raw_input(self):
         return self.joystick.get_axis(self.axis_num)
@@ -55,15 +56,15 @@ def load_joysticks():
 
 
 def get_new_button_press():
+    pygame.event.pump()
     for event in pygame.event.get():
         if event.type == pygame.JOYAXISMOTION and abs(event.value) > 0.7:
             return AxisInput(event.joy, event.axis)  # return the new axis
     return None
 
 
-def joystick_pump():
+def event_pump():
     pygame.event.pump()
-
 
 pygame.init() # start the pygame system
 load_joysticks()

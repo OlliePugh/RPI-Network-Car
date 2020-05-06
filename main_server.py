@@ -3,6 +3,7 @@ from controller import Controller
 import inputs
 from threading import Thread, Event
 import threading
+import time
 
 
 class MainGui(Tk):
@@ -42,12 +43,11 @@ class ControlChangeGUI(Toplevel):
         self.mainloop()
 
     def get_new_control(self):  # need to cancel this thread if the user presses cancel
-        new_input = None
-        while new_input is None and not self.thread_stop_event.wait(0.1):  # check for 0.1 seconds if thread stop event has occured
+        while not self.thread_stop_event.wait(0.1):  # check for 0.1 seconds if thread stop event has occured
             new_input = inputs.get_new_button_press()
-            self.new_control = new_input
-            self.new_control_label["text"] = str(self.new_control)
-        print("ENDING THREAD")
+            if new_input is not None:
+                self.new_control = new_input
+                self.new_control_label["text"] = str(self.new_control)
         return
 
     def cancel(self):
@@ -70,7 +70,6 @@ class SettingsGUI(Toplevel):
         self.controller = controller
 
         self.protocol("WM_DELETE_WINDOW", self.close)
-        self.thread_stop_event = Event()
 
         row_num = 1
 
@@ -79,40 +78,55 @@ class SettingsGUI(Toplevel):
         for control_name, control in self.controller.controls.items():
             self.control_dict[control_name] = {}
 
-            self.control_dict[control_name]["name_label"] = Label(self, text=control_name.title())
-            self.control_dict[control_name]["name_label"].grid(row=row_num, column=0)
+            Label(self, text=control_name.title()).grid(row=row_num, column=0)
 
             self.control_dict[control_name]["curr_control_label"] = Label(self, text=str(control))
             self.control_dict[control_name]["curr_control_label"].grid(row=row_num, column=1)
 
-            self.control_dict[control_name]["control_value"] = Label(self, text=str(0.00))
-            self.control_dict[control_name]["control_value"].grid(row=row_num, column=2)
+            self.control_dict[control_name]["control_value"] = StringVar(self, value="0.00")
 
-            self.control_dict[control_name]["change_button"] = Button(self, text="Change", command=lambda control_name=control_name: ControlChangeGUI(self.controller, control_name, self))
-            self.control_dict[control_name]["change_button"].grid(row=row_num, column=3)
+            Label(self, textvariable=self.control_dict[control_name]["control_value"]).grid(row=row_num, column=2)
+            Button(self, text="Reset", command=lambda control_name=control_name: self.reset_control(control_name)).grid(row=row_num, column=3)
+
+            Button(self, text="Change", command=lambda control_name=control_name: ControlChangeGUI(self.controller, control_name, self)).grid(row=row_num, column=4)
+
+            self.control_dict[control_name]["deadzone_value"] = DoubleVar(0.00)
+
+            if control is not None:
+                self.control_dict[control_name]["deadzone_value"].set(float(control.deadzone))
+                print(control.deadzone)
+
+            self.control_dict[control_name]["deadzone_scale"] = Scale(self, from_=0, to=1, digits=3, resolution=0.01, variable=self.control_dict[control_name]["deadzone_value"], label="Deadzone", orient=HORIZONTAL)
+            self.control_dict[control_name]["deadzone_scale"].grid(row=row_num, column=5)
 
             row_num += 1
 
-        self.thread = Thread(target=self.update_live_values, daemon=True).start()  # this needs to be properly killed
+        self.update_live_values()
+
         self.mainloop()
 
     def update_control_name(self, control_name):
         self.control_dict[control_name]["curr_control_label"]["text"] = str(self.controller.controls[control_name])
 
-    def update_live_values(self):
-        while not self.thread_stop_event.wait(0.05):
-            inputs.joystick_pump()
-            for control_name, objects in self.control_dict.items():
-                copy_objects = objects
-                if self.controller.controls[control_name] is None:
-                    copy_objects["control_value"]["text"] = "0.00"
-                else:
-                    copy_objects["control_value"]["text"] = "{:.2f}".format(self.controller.controls[control_name].get_raw_input())
-        return
+    def update_live_values(self):  # this will update the live values and update the deadzone values in the controller
+        for control_name, objects in self.control_dict.items():
+            if self.controller.controls[control_name] is not None:
+                objects["control_value"].set("{:.2f}".format(self.controller.controls[control_name].get_raw_input()))
+                self.controller.controls[control_name].deadzone = objects["deadzone_value"].get()
+                self.control_dict[control_name]["deadzone_scale"].config(state="active")
+            else:
+                objects["control_value"].set("0.00")
+                self.control_dict[control_name]["deadzone_value"].set(0.00)
+                self.control_dict[control_name]["deadzone_scale"].config(state="disable")
+        self.after(100, self.update_live_values)
+
+    def reset_control(self, control_name):
+        self.controller.controls[control_name] = None
+        self.update_control_name(control_name)
 
     def close(self):
-        self.thread_stop_event.set()
         self.destroy()
+
 
 def print_threads():
     while True:
@@ -120,7 +134,6 @@ def print_threads():
 
 def main():
     controller = Controller()
-    #Thread(target=print_threads, daemon=True).start()
     gui = MainGui(controller)
 
 

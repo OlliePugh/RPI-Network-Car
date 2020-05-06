@@ -1,6 +1,8 @@
 import socket
 from packets import *
 from threading import Thread
+import inputs
+import time
 
 
 LOCAL_HOST = ("127.0.0.1", 51697)
@@ -67,11 +69,13 @@ class Controller:
         self.brake = 0
         self.turning_angle = 0
 
-        Thread(target=self.update_inputs, daemon=True)  # create a thread to keep the inputs
+        Thread(target=self.update_inputs, daemon=True).start() # create a thread to keep the inputs
 
     def update_inputs(self):  # https://stackoverflow.com/questions/47855725/pygame-how-can-i-allow-my-users-to-change-their-input-keys-custom-keybinding
         while True:  # USE THE ABOVE TO CREATE CUSTOM CONTROLS
+            inputs.event_pump()
             if None not in self.controls.values():  # if all controls are set
                 self.throttle = self.controls["throttle"]  # GET THE VALUE FROM THE PYGAME INPUT
                 self.brake = self.controls["brake"]  # GET THE VALUE FROM THE PYGAME INPUT
                 self.turning_angle = self.controls["turning"]  # GET THE VALUE FROM THE PYGAME INPUT
+            time.sleep(0.016)  # update 60 times a second

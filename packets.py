@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import pickle
+import time
 
 
 class Packet(ABC, object):  # abstract class
@@ -16,15 +17,16 @@ class Packet(ABC, object):  # abstract class
         pass
 
 
-class ExamplePacket(Packet):  # packet which contains the controls from the controller
+class RTTPacket(Packet):  # packet which contains the controls from the controller
     id = 0
 
     def __init__(self, packet_contents):
-        super(ExamplePacket, self).__init__(packet_contents)
+        super(RTTPacket, self).__init__(packet_contents)
+        self.send_time = packet_contents[1]
 
     @staticmethod
     def construct():  # used to create a packet to send
-        return ExamplePacket([ExamplePacket.id, "This is an example Packet with some text inside"])
+        return RTTPacket([RTTPacket.id, time.time()])  # send a packet with with the unix timestamp of packet creation
 
 
 class ControlsPacket(Packet):  # packet which contains the controls from the controller
@@ -32,17 +34,16 @@ class ControlsPacket(Packet):  # packet which contains the controls from the con
 
     def __init__(self, packet_contents):
         super(ControlsPacket, self).__init__(packet_contents)
-        self.wheel_angle = packet_contents[1]
+        self.turning_angle = packet_contents[1]
         self.throttle = packet_contents[2]
         self.brake = packet_contents[3]
 
-
     @staticmethod
     def construct(wheel_angle, throttle, brake):  # used to create a packet to send
-        return ControlsPacket([ControlsPacket.id, wheel_angle, throttle, brake])
+        return ControlsPacket([ControlsPacket.id, round(wheel_angle*100), round(throttle*100), round(brake*100)])
 
 
-packet_dict = {ExamplePacket.id: ExamplePacket,
+packet_dict = {RTTPacket.id: RTTPacket,
                ControlsPacket.id: ControlsPacket}
 
 

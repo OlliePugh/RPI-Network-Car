@@ -12,7 +12,7 @@ class Car:
     def __init__(self):
 
         self.reaction_dictionary = {
-            ExamplePacket: self.example_packet_response,
+            RTTPacket: self.rtt_packet_response,
             ControlsPacket: self.control_packet_response}  # a dictionary that stores the function that handles the packet
 
         self.connected = False
@@ -26,7 +26,6 @@ class Car:
 
     def incoming_packet_handler(self):
         while True:
-            print("listening")
             try:
                 data, address = self.socket.recvfrom(1024)  # 1024 bytes buffer size
                 packet_contents = pickle.loads(data)
@@ -39,27 +38,24 @@ class Car:
                 if packet.__class__ not in self.reaction_dictionary:
                     print("Packet of unknown type received. Type =  " + packet.__class__.__name__)
                     continue
-
                 self.reaction_dictionary[packet.__class__](packet)  # call the function that corresponds to the packet
             except ConnectionResetError:
                 print("connection error")
 
+    def send_rtt_packet(self):  # send an RTT packet back to the server
+        self.socket.sendto(bytes(RTTPacket.construct()), CONTROLLER_ADDRESS)  # this function is used for testing a connection
 
-    def send_example_packet(self):
-        print("Sending Example Packet")
-        self.socket.sendto(bytes(ExamplePacket.construct()), CONTROLLER_ADDRESS)  # this function is used for testing a connection
-
-    def example_packet_response(self, example_packet):
-        print(example_packet.data[1])
+    def rtt_packet_response(self, rtt_packet):  # if an rtt packet is received just send it straight back
+        self.send_rtt_packet()
 
     def control_packet_response(self, control_packet):
-        pass
+        print(control_packet.throttle, control_packet.brake, control_packet.turning_angle)
 
 
 def main():
     try:
         car = Car()
-        car.send_example_packet()
+        car.send_rtt_packet()
         while True:
             pass
     except Exception:

@@ -29,8 +29,19 @@ class RTTPacket(Packet):  # packet which contains the controls from the controll
         return RTTPacket([RTTPacket.id, time.time()])  # send a packet with with the unix timestamp of packet creation
 
 
-class ControlsPacket(Packet):  # packet which contains the controls from the controller
+class HeartbeatPacket(Packet):
     id = 1
+
+    def __init__(self, packet_contents):
+        super(HeartbeatPacket, self).__init__(packet_contents)
+
+    @staticmethod
+    def construct():  # used to create a packet to send
+        return HeartbeatPacket([HeartbeatPacket.id])
+
+
+class ControlsPacket(Packet):  # packet which contains the controls from the controller
+    id = 2
 
     def __init__(self, packet_contents):
         super(ControlsPacket, self).__init__(packet_contents)
@@ -44,6 +55,7 @@ class ControlsPacket(Packet):  # packet which contains the controls from the con
 
 
 packet_dict = {RTTPacket.id: RTTPacket,
+                   HeartbeatPacket.id: HeartbeatPacket,
                ControlsPacket.id: ControlsPacket}
 
 

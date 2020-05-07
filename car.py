@@ -23,6 +23,7 @@ class Car:
         self.socket.connect(CONTROLLER_ADDRESS)  # connect to the car
 
         Thread(target=self.incoming_packet_handler, daemon=True).start()  # assign thread to listen to incoming traffic
+        Thread(target=self.scheduled_packet_send_loop, daemon=True).start()
 
     def incoming_packet_handler(self):
         while True:
@@ -40,10 +41,18 @@ class Car:
                     continue
                 self.reaction_dictionary[packet.__class__](packet)  # call the function that corresponds to the packet
             except ConnectionResetError:
-                print("connection error")
+                print("Can't reach server")
+
+    def scheduled_packet_send_loop(self):  # handles gathering control information and transmitting to the car
+        while True:
+            self.send_heartbeat_packet()
+            time.sleep(3)  # send 30 control packets a second
 
     def send_rtt_packet(self):  # send an RTT packet back to the server
         self.socket.sendto(bytes(RTTPacket.construct()), CONTROLLER_ADDRESS)  # this function is used for testing a connection
+
+    def send_heartbeat_packet(self):
+        self.socket.sendto(bytes(HeartbeatPacket.construct()), CONTROLLER_ADDRESS)
 
     def rtt_packet_response(self, rtt_packet):  # if an rtt packet is received just send it straight back
         self.send_rtt_packet()
